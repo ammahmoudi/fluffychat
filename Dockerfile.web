@@ -1,0 +1,94 @@
+# Builds FluffyChat for web and serves via nginx with SPA routing.
+#
+# Standard build (works everywhere, no prerequisites):
+#   docker build -f Dockerfile.web -t fluffychat-web .
+#
+# Fast local rebuild (for developers on slow/unstable connections):
+#   1. Build the base image once:
+#        docker build -f Dockerfile.web-base -t fluffychat-builder:local .
+#   2. Then on every code change build with:
+#        docker build -f Dockerfile.web \
+#          --build-arg FLUTTER_IMAGE=fluffychat-builder:local \
+#          --build-arg USE_PREBUILT=true \
+#          -t fluffychat-web .
+#   The base image contains Flutter, Rust, pub packages, and pre-compiled
+#   Vodozemac/native_imaging -- step 2 needs no internet and runs in ~3 min.
+
+ARG FLUTTER_IMAGE=ghcr.io/cirruslabs/flutter:stable
+ARG NGINX_IMAGE=docker.io/nginx:alpine
+
+FROM ${FLUTTER_IMAGE} AS builder
+
+ARG INCLUDE_SOURCE_MAPS=false
+ARG STRIP_DEBUG_ARTIFACTS=true
+# Set to true only when FLUTTER_IMAGE=fluffychat-builder:local (see above).
+ARG USE_PREBUILT=false
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Install build dependencies -- skipped when using the pre-built base image.
+RUN if [ "${USE_PREBUILT}" = "false" ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends \
+        ca-certificates curl git unzip build-essential \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+RUN if [ "${USE_PREBUILT}" = "false" ]; then \
+      curl -fsSL "https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64.tar.gz" \
+      | tar -xz -C /tmp \
+      && mv /tmp/yq_linux_amd64 /usr/local/bin/yq; \
+    fi
+
+RUN if [ "${USE_PREBUILT}" = "false" ]; then \
+      curl -fsSL https://sh.rustup.rs | bash -s -- -y; \
+    fi
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN if [ "${USE_PREBUILT}" = "false" ]; then \
+      rustup toolchain install nightly --profile minimal \
+      && rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu; \
+    fi
+
+WORKDIR /app
+
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter pub get
+
+COPY . ./
+
+# Compile Vodozemac WASM, download native_imaging, compile native_executor.js.
+# When USE_PREBUILT=true these artifacts come from /prebuilt/ in the base image --
+# no network or Rust compile needed.
+RUN if [ "${USE_PREBUILT}" = "true" ]; then \
+      cp /prebuilt/vodozemac_assets/* ./assets/vodozemac/ \
+      && cp /prebuilt/web/* ./web/; \
+    else \
+      ./scripts/prepare-web.sh; \
+    fi
+
+# If you serve behind a sub-path (e.g. /fluffychat/), set BASE_HREF accordingly.
+ARG BASE_HREF=/
+RUN extra_flags=() \
+  && if [ "${INCLUDE_SOURCE_MAPS}" = "true" ]; then extra_flags+=(--source-maps); fi \
+  && flutter build web \
+    --dart-define=FLUTTER_WEB_CANVASKIT_URL=canvaskit/ \
+    --base-href "${BASE_HREF}" \
+    --release \
+    "${extra_flags[@]}" \
+  && if [ "${STRIP_DEBUG_ARTIFACTS}" = "true" ]; then \
+      find build/web -type f -name '*.symbols' -delete; \
+      if [ "${INCLUDE_SOURCE_MAPS}" != "true" ]; then find build/web -type f -name '*.map' -delete; fi; \
+    fi
+
+FROM ${NGINX_IMAGE}
+RUN rm -rf /usr/share/nginx/html
+RUN mkdir -p /config
+COPY --from=builder /app/build/web /usr/share/nginx/html
+
+# SPA-friendly nginx config + optional runtime config.json injection
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint.d/99-copy-config.sh /docker-entrypoint.d/99-copy-config.sh
+# Strip Windows CRLF line endings and make executable
+RUN sed -i 's/\r//' /etc/nginx/conf.d/default.conf \
+      /docker-entrypoint.d/99-copy-config.sh \
+  && chmod +x /docker-entrypoint.d/99-copy-config.sh

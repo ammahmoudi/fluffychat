@@ -1,0 +1,30 @@
+.git
+.github
+.vscode
+.idea
+.dart_tool
+.build
+log
+build
+**/build
+coverage
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Flutter / Dart
+.pub-cache
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub
+
+# Platform artifacts
+android/.gradle
+android/app/build
+ios/Pods
+ios/.symlinks
+linux/flutter
+macos/Flutter/ephemeral
+windows/flutter

@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:fluffychat/utils/code_highlight_theme.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:fluffychat/utils/event_checkbox_extension.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
@@ -506,15 +507,78 @@ class HtmlMessage extends StatelessWidget {
     }
   }
 
+  /// Splits the body's top-level children into logical paragraphs so that each
+  /// paragraph can be rendered with its own [TextDirection].
+  ///
+  /// - Block-level elements (p, div, blockquote, h1–h6, …) each become their
+  ///   own paragraph group.
+  /// - Consecutive inline nodes are grouped together. If the combined text of
+  ///   the group contains newlines (plain-text message with \n), each non-empty
+  ///   line is split into its own group so direction is detected per line.
+  List<List<dom.Node>> _collectParagraphs(dom.Element body) {
+    final result = <List<dom.Node>>[];
+    final inlineBuffer = <dom.Node>[];
+
+    void flushInlineBuffer() {
+      if (inlineBuffer.isEmpty) return;
+      final text = inlineBuffer.map((n) => n.text ?? '').join();
+      if (text.contains('\n')) {
+        // Plain-text message: detect direction per visual line.
+        for (final line in text.split('\n')) {
+          if (line.trim().isNotEmpty) result.add([dom.Text(line)]);
+        }
+      } else {
+        result.add(List.of(inlineBuffer));
+      }
+      inlineBuffer.clear();
+    }
+
+    for (final node in body.nodes) {
+      if (node is dom.Element && blockHtmlTags.contains(node.localName)) {
+        flushInlineBuffer();
+        result.add([node]);
+      } else {
+        inlineBuffer.add(node);
+      }
+    }
+    flushInlineBuffer();
+
+    return result.isEmpty ? [body.nodes.toList()] : result;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final element = parser.parse(html).body ?? dom.Element.html('');
-    return Text.rich(
-      _renderHtml(element, context),
-      style: TextStyle(fontSize: fontSize, color: textColor),
-      maxLines: limitHeight ? 64 : null,
-      overflow: TextOverflow.fade,
-      selectionColor: textColor.withAlpha(128),
+    final body = parser.parse(html).body ?? dom.Element.html('');
+    final paragraphs = _collectParagraphs(body);
+
+    Widget buildParagraph(List<dom.Node> nodes) {
+      final text = nodes.map((n) => n.text ?? '').join();
+      return Text.rich(
+        TextSpan(
+          style: TextStyle(fontSize: fontSize, color: textColor),
+          children: nodes.map((n) => _renderHtml(n, context)).toList(),
+        ),
+        maxLines: limitHeight ? 64 : null,
+        overflow: TextOverflow.fade,
+        selectionColor: textColor.withAlpha(128),
+        // Per-paragraph direction: each line/block gets independent RTL/LTR.
+        textDirection: detectTextDirection(text),
+        textAlign: TextAlign.start,
+      );
+    }
+
+    // Fast path: single paragraph, no Column overhead.
+    if (paragraphs.length == 1) return buildParagraph(paragraphs.first);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < paragraphs.length; i++) ...[
+          buildParagraph(paragraphs[i]),
+          if (i < paragraphs.length - 1) SizedBox(height: fontSize * 0.25),
+        ],
+      ],
     );
   }
 }

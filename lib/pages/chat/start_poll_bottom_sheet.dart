@@ -1,5 +1,6 @@
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/matrix.dart';
 
@@ -76,36 +77,44 @@ class _StartPollBottomSheetState extends State<StartPollBottomSheet> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         children: [
-          TextField(
-            controller: _bodyController,
-            minLines: 2,
-            maxLines: 4,
-            maxLength: 1024,
-            onChanged: _updateCanCreate,
-            decoration: InputDecoration(
-              hintText: L10n.of(context).pollQuestion,
-              counter: const SizedBox.shrink(),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _bodyController,
+            builder: (context, value, _) => TextField(
+              textDirection: detectTextDirection(value.text),
+              controller: _bodyController,
+              minLines: 2,
+              maxLines: 4,
+              maxLength: 1024,
+              onChanged: _updateCanCreate,
+              decoration: InputDecoration(
+                hintText: L10n.of(context).pollQuestion,
+                counter: const SizedBox.shrink(),
+              ),
             ),
           ),
           const Divider(height: 32),
           ..._answers.map(
             (answerController) => Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: TextField(
-                controller: answerController,
-                onChanged: _updateCanCreate,
-                maxLength: 64,
-                decoration: InputDecoration(
-                  counter: const SizedBox.shrink(),
-                  hintText: L10n.of(context).answerOption,
-                  suffixIcon: _answers.length == 2
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.cancel_outlined),
-                          onPressed: () => setState(() {
-                            _answers.remove(answerController..dispose());
-                          }),
-                        ),
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: answerController,
+                builder: (context, value, _) => TextField(
+                  textDirection: detectTextDirection(value.text),
+                  controller: answerController,
+                  onChanged: _updateCanCreate,
+                  maxLength: 64,
+                  decoration: InputDecoration(
+                    counter: const SizedBox.shrink(),
+                    hintText: L10n.of(context).answerOption,
+                    suffixIcon: _answers.length == 2
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.cancel_outlined),
+                            onPressed: () => setState(() {
+                              _answers.remove(answerController..dispose());
+                            }),
+                          ),
+                  ),
                 ),
               ),
             ),

@@ -1,6 +1,7 @@
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/matrix.dart';
 
@@ -75,23 +76,29 @@ class ReplyContent extends StatelessWidget {
                     );
                   },
                 ),
-                Text(
-                  displayEvent.calcLocalizedBodyFallback(
-                    MatrixLocals(L10n.of(context)),
-                    withSenderNamePrefix: false,
-                    hideReply: true,
-                    plaintextBody: true,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: theme.brightness == Brightness.dark
-                        ? theme.colorScheme.onSurface
-                        : ownMessage
-                        ? theme.colorScheme.onTertiary
-                        : theme.colorScheme.onSurface,
-                    fontSize: fontSize,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final body = displayEvent.calcLocalizedBodyFallback(
+                      MatrixLocals(L10n.of(context)),
+                      withSenderNamePrefix: false,
+                      hideReply: true,
+                      plaintextBody: true,
+                    );
+                    return Text(
+                      body,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      textDirection: detectTextDirection(body),
+                      style: TextStyle(
+                        color: theme.brightness == Brightness.dark
+                            ? theme.colorScheme.onSurface
+                            : ownMessage
+                            ? theme.colorScheme.onTertiary
+                            : theme.colorScheme.onSurface,
+                        fontSize: fontSize,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

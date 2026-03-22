@@ -1,6 +1,7 @@
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/utils/file_description.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:fluffychat/utils/url_launcher.dart';
 import 'package:fluffychat/widgets/mxc_image.dart';
 import 'package:flutter/material.dart';
@@ -115,6 +116,7 @@ class ImageBubble extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Linkify(
                 text: fileDescription,
+                textDirection: detectTextDirection(fileDescription),
                 textScaleFactor: MediaQuery.textScalerOf(context).scale(1),
                 style: TextStyle(
                   color: textColor,

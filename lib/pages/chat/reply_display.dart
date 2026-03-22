@@ -1,5 +1,6 @@
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/matrix.dart';
 
@@ -62,15 +63,21 @@ class _EditContent extends StatelessWidget {
       children: <Widget>[
         Icon(Icons.edit, color: theme.colorScheme.primary),
         Container(width: 15.0),
-        Text(
-          event.calcLocalizedBodyFallback(
-            MatrixLocals(L10n.of(context)),
-            withSenderNamePrefix: false,
-            hideReply: true,
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: TextStyle(color: theme.textTheme.bodyMedium!.color),
+        Builder(
+          builder: (context) {
+            final body = event.calcLocalizedBodyFallback(
+              MatrixLocals(L10n.of(context)),
+              withSenderNamePrefix: false,
+              hideReply: true,
+            );
+            return Text(
+              body,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              textDirection: detectTextDirection(body),
+              style: TextStyle(color: theme.textTheme.bodyMedium!.color),
+            );
+          },
         ),
       ],
     );

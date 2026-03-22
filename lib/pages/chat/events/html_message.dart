@@ -311,6 +311,7 @@ class HtmlMessage extends StatelessWidget {
                 ],
                 style: TextStyle(fontSize: fontSize, color: textColor),
               ),
+              textDirection: detectTextDirection(node.text),
             ),
           ),
         );
@@ -329,6 +330,7 @@ class HtmlMessage extends StatelessWidget {
                   depth: depth,
                 ),
               ),
+              textDirection: detectTextDirection(node.text),
               style: TextStyle(
                 fontStyle: FontStyle.italic,
                 fontSize: fontSize,
@@ -437,6 +439,7 @@ class HtmlMessage extends StatelessWidget {
                       ),
                   ],
                 ),
+                textDirection: detectTextDirection(node.text),
                 style: TextStyle(fontSize: fontSize, color: textColor),
               ),
             ),
@@ -462,6 +465,7 @@ class HtmlMessage extends StatelessWidget {
                     depth: depth,
                   ),
                 ),
+                textDirection: detectTextDirection(node.text),
                 style: TextStyle(
                   fontSize: fontSize,
                   color: textColor,

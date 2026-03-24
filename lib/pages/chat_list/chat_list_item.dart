@@ -1,5 +1,6 @@
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:fluffychat/pages/chat_list/unread_bubble.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/room_status_extension.dart';
@@ -294,6 +295,7 @@ class ChatListItem extends StatelessWidget {
                         : typingText.isNotEmpty
                         ? Text(
                             typingText,
+                            textDirection: detectTextDirection(typingText),
                             style: TextStyle(color: theme.colorScheme.primary),
                             maxLines: 1,
                             softWrap: false,
@@ -326,8 +328,9 @@ class ChatListItem extends StatelessWidget {
                                   directChatMatrixId !=
                                       room.lastEvent?.senderId),
                             ),
-                            builder: (context, snapshot) => Text(
-                              room.membership == Membership.invite
+                            builder: (context, snapshot) {
+                              final previewText = room.membership ==
+                                      Membership.invite
                                   ? room
                                             .getState(
                                               EventTypes.RoomMember,
@@ -339,16 +342,21 @@ class ChatListItem extends StatelessWidget {
                                             ? L10n.of(context).newChatRequest
                                             : L10n.of(context).inviteGroupChat)
                                   : snapshot.data ??
-                                        L10n.of(context).noMessagesYet,
-                              softWrap: false,
-                              maxLines: room.notificationCount >= 1 ? 2 : 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                decoration: room.lastEvent?.redacted == true
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                            ),
+                                        L10n.of(context).noMessagesYet;
+                              return Text(
+                                previewText,
+                                textDirection:
+                                    detectTextDirection(previewText),
+                                softWrap: false,
+                                maxLines: room.notificationCount >= 1 ? 2 : 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  decoration: room.lastEvent?.redacted == true
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              );
+                            },
                           ),
                   ),
                   const SizedBox(width: 8),

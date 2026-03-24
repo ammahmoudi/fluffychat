@@ -1,4 +1,5 @@
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:fluffychat/utils/fluffy_share.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
@@ -214,6 +215,7 @@ class PublicRoomDialog extends StatelessWidget {
                         child: SingleChildScrollView(
                           child: SelectableLinkify(
                             text: topic,
+                            textDirection: detectTextDirection(topic),
                             textScaleFactor: MediaQuery.textScalerOf(
                               context,
                             ).scale(1),

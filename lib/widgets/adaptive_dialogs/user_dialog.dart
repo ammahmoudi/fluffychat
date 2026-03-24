@@ -1,5 +1,6 @@
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/utils/text_direction_detector.dart';
 import 'package:fluffychat/utils/date_time_extension.dart';
 import 'package:fluffychat/utils/fluffy_share.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/adaptive_dialog_action.dart';
@@ -171,6 +172,7 @@ class UserDialog extends StatelessWidget {
                     child: SingleChildScrollView(
                       child: SelectableLinkify(
                         text: statusMsg,
+                        textDirection: detectTextDirection(statusMsg),
                         textScaleFactor: MediaQuery.textScalerOf(
                           context,
                         ).scale(1),
